@@ -9,6 +9,7 @@ served over https cannot call it directly (browsers block "mixed content"). Forw
 server side keeps the numbers identical to the course site while the page stays on https.
 """
 import os
+from collections import OrderedDict
 from pathlib import Path
 
 import httpx
@@ -24,7 +25,24 @@ PREFIX = '/lotus-bf'
 ALLOWED = ('terms', 'query/')
 
 app = FastAPI(title='LoTUS-BF HW09', docs_url=f'{PREFIX}/api/docs', openapi_url=f'{PREFIX}/api/openapi.json')
-client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=8.0), follow_redirects=True)
+client = httpx.AsyncClient(timeout=httpx.Timeout(45.0, connect=6.0), follow_redirects=True)
+
+# Small in-memory cache of successful upstream answers: repeated queries are instant and keep
+# working for a while if the course servers go down (observed 2026-11-11 15:05: both down).
+CACHE: OrderedDict = OrderedDict()
+CACHE_MAX_BYTES = 150 * 1024 * 1024
+cache_bytes = 0
+
+
+def cache_put(key, value):
+    global cache_bytes
+    if key in CACHE:
+        return
+    CACHE[key] = value
+    cache_bytes += len(value[0])
+    while cache_bytes > CACHE_MAX_BYTES and CACHE:
+        _, old = CACHE.popitem(last=False)
+        cache_bytes -= len(old[0])
 
 
 @app.get('/health')
@@ -36,6 +54,11 @@ async def health():
 async def proxy(path: str, request: Request):
     if not path.startswith(ALLOWED):
         return JSONResponse({'error': f'unknown endpoint: {path}'}, status_code=404)
+    key = f'{path}?{request.url.query}'
+    if key in CACHE:
+        CACHE.move_to_end(key)
+        body, ctype, extra = CACHE[key]
+        return Response(body, media_type=ctype, headers={'Cache-Control': 'public, max-age=3600', 'X-Cache': 'hit', **extra})
     last_err = None
     for base in UPSTREAMS:  # fail over to the second course server
         try:
@@ -49,9 +72,14 @@ async def proxy(path: str, request: Request):
         headers = {'Cache-Control': 'public, max-age=3600'} if r.status_code == 200 else {}
         if 'content-disposition' in r.headers:
             headers['Content-Disposition'] = r.headers['content-disposition']
+        if r.status_code == 200:
+            cache_put(key, (r.content, r.headers.get('content-type'),
+                            {k: v for k, v in headers.items() if k == 'Content-Disposition'}))
         return Response(r.content, status_code=r.status_code,
                         media_type=r.headers.get('content-type'), headers=headers)
-    return JSONResponse({'error': f'course API unreachable ({last_err})'}, status_code=502)
+    return JSONResponse({'error': 'The course LoTUS server (hpc/mil.psy.ntu.edu.tw:5000) is not responding '
+                                  f'right now ({last_err or "timeout"}). Please retry in a few minutes.'},
+                        status_code=502)
 
 
 @app.get('/')

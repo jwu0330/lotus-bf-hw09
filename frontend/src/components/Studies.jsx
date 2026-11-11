@@ -44,7 +44,7 @@ export function Studies ({ query }) {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize)
 
-  if (!query) return <div className='muted'>Enter a query or pick a term to list matching studies.</div>
+  if (!query) return <div className='empty'>Enter a query above, pick a term, or try an example.</div>
   return (
     <div className='studies'>
       <div className='studies__bar'>

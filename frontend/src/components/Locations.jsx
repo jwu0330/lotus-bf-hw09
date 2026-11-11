@@ -31,7 +31,7 @@ export function Locations ({ query, onPickLocation }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize)
 
-  if (!query) return <div className='muted small'>Activation coordinates of matching studies appear here.</div>
+  if (!query) return <div className='empty'>Run a query to list the activation peaks of matching studies.</div>
   if (loading) return <div className='skeleton' />
   if (err) return <div className='alert alert--error'>{err}</div>
   return (

@@ -23,7 +23,7 @@ export function RelatedTerms ({ term, onPickTerm }) {
     return () => ac.abort()
   }, [term])
 
-  if (!term) return <div className='muted small'>Pick a term to see what co-occurs with it.</div>
+  if (!term) return <div className='muted small'>Pick a term to see which terms co-occur with it.</div>
   const max = rows[0]?.jaccard || 1
   return (
     <div className='related'>

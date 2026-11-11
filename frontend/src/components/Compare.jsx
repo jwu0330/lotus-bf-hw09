@@ -88,7 +88,7 @@ export function Compare ({ queryA, onUseQuery }) {
           </ul>
         </>
       )}
-      {!run && <div className='muted small'>Enter two terms or coordinates (e.g. A = amygdala, B = hippocampus) to see what they share and what dissociates them.</div>}
+      {!run && <div className='empty'>Enter two terms or coordinates (e.g. A = amygdala, B = hippocampus) to see what they share and what dissociates them.</div>}
     </div>
   )
 }

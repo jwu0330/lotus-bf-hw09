@@ -44,20 +44,21 @@ export default function App () {
   return (
     <div className='app'>
       <header className='app__header'>
-        <div>
+        <div className='brand'>
+          <span className='brand__mark' aria-hidden='true'>L</span>
           <h1 className='app__title'>LoTUS-BF</h1>
-          <div className='app__subtitle'>Location-or-Term Unified Search for Brain Functions</div>
+          <span className='app__subtitle'>Location-or-Term Unified Search for Brain Functions</span>
         </div>
-        {query && <div className='app__query' title='Current query (shareable URL)'>q = <code>{query}</code></div>}
+        {query && <div className='app__query' title='Current query — the URL is shareable'><span className='muted'>Query</span> <code>{query}</code></div>}
       </header>
       {server === 'waking' && <div className='banner'>Connecting… (free hosting sleeps when idle; the first load can take up to a minute)</div>}
       {server === 'down' && <div className='banner banner--err'>The course LoTUS data server (psy.ntu.edu.tw:5000) is not responding right now, so searches will fail. This site is up; please retry in a few minutes.</div>}
 
       <main className='app__grid'>
         <section className='card' aria-label='Terms and locations'>
-          <div className='tabs' role='tablist'>
+          <div className='seg' role='tablist'>
             {[['terms', 'Terms'], ['locations', 'Locations']].map(([k, label]) => (
-              <button key={k} role='tab' aria-selected={leftTab === k} className={`tab ${leftTab === k ? 'is-active' : ''}`} onClick={() => setLeftTab(k)}>{label}</button>
+              <button key={k} role='tab' aria-selected={leftTab === k} className={`seg__btn ${leftTab === k ? 'is-active' : ''}`} onClick={() => setLeftTab(k)}>{label}</button>
             ))}
           </div>
           {leftTab === 'terms'
@@ -74,9 +75,9 @@ export default function App () {
 
         <section className='card' aria-label='Query and studies'>
           <QueryBuilder query={query} setQuery={setQuery} />
-          <div className='tabs' role='tablist'>
+          <div className='seg' role='tablist'>
             {[['studies', 'Studies'], ['compare', 'Compare A vs B']].map(([k, label]) => (
-              <button key={k} role='tab' aria-selected={midTab === k} className={`tab ${midTab === k ? 'is-active' : ''}`} onClick={() => setMidTab(k)}>{label}</button>
+              <button key={k} role='tab' aria-selected={midTab === k} className={`seg__btn ${midTab === k ? 'is-active' : ''}`} onClick={() => setMidTab(k)}>{label}</button>
             ))}
           </div>
           {midTab === 'studies'

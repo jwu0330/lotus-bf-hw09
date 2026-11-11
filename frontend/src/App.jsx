@@ -19,7 +19,7 @@ export default function App () {
   const [focusTerm, setFocusTerm] = useState('')
   const [leftTab, setLeftTab] = useState('terms')
   const [midTab, setMidTab] = useState('studies')
-  const [slow, setSlow] = useState(false)
+  const [server, setServer] = useState('ok') // ok | waking | down
 
   const append = useCallback((tok) => setQuery((q) => (q ? `${q} ${tok}` : tok)), [setQuery])
   const handlePickTerm = useCallback((t) => { append(t); setFocusTerm(t) }, [append])
@@ -27,8 +27,11 @@ export default function App () {
 
   // Free hosting sleeps when idle: tell the user instead of looking broken.
   useEffect(() => {
-    const t = setTimeout(() => setSlow(true), 4000)
-    fetch(`${import.meta.env.BASE_URL}api/terms`).finally(() => { clearTimeout(t); setSlow(false) })
+    const t = setTimeout(() => setServer('waking'), 4000)
+    fetch(`${import.meta.env.BASE_URL}api/terms`)
+      .then((r) => setServer(r.ok ? 'ok' : 'down'))
+      .catch(() => setServer('down'))
+      .finally(() => clearTimeout(t))
     return () => clearTimeout(t)
   }, [])
 
@@ -47,7 +50,8 @@ export default function App () {
         </div>
         {query && <div className='app__query' title='Current query (shareable URL)'>q = <code>{query}</code></div>}
       </header>
-      {slow && <div className='banner'>Waking up the server (free hosting sleeps when idle) — the first load can take up to a minute…</div>}
+      {server === 'waking' && <div className='banner'>Connecting… (free hosting sleeps when idle; the first load can take up to a minute)</div>}
+      {server === 'down' && <div className='banner banner--err'>The course LoTUS data server (psy.ntu.edu.tw:5000) is not responding right now, so searches will fail. This site is up; please retry in a few minutes.</div>}
 
       <main className='app__grid'>
         <section className='card' aria-label='Terms and locations'>
@@ -81,7 +85,7 @@ export default function App () {
         </section>
 
         <section className='card' aria-label='Brain map'>
-          <NiiViewer query={query} />
+          <NiiViewer query={query} onPickLocation={handlePickLocation} />
         </section>
       </main>
       <footer className='app__footer'>

@@ -25,7 +25,7 @@ PREFIX = '/lotus-bf'
 ALLOWED = ('terms', 'query/')
 
 app = FastAPI(title='LoTUS-BF HW09', docs_url=f'{PREFIX}/api/docs', openapi_url=f'{PREFIX}/api/openapi.json')
-client = httpx.AsyncClient(timeout=httpx.Timeout(45.0, connect=6.0), follow_redirects=True)
+client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=5.0), follow_redirects=True)
 
 # Small in-memory cache of successful upstream answers: repeated queries are instant and keep
 # working for a while if the course servers go down (observed 2026-11-11 15:05: both down).

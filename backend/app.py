@@ -64,7 +64,7 @@ async def proxy(path: str, request: Request):
         try:
             r = await client.get(f'{base}/{path}', params=request.query_params)
         except httpx.HTTPError as e:
-            last_err = e
+            last_err = f'{type(e).__name__} from {base}'
             continue
         if r.status_code >= 500:
             last_err = f'HTTP {r.status_code}'

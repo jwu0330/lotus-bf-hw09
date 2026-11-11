@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { API_BASE } from '../api'
+import { API_BASE, apiFetch } from '../api'
 
 // API: GET /terms/<term>  ->  {related: [{term, co_count, jaccard}]}
 // Unused by the template; shows which terms co-occur with the term last picked/queried.
@@ -12,7 +12,7 @@ export function RelatedTerms ({ term, onPickTerm }) {
     if (!term) { setRows([]); return }
     const ac = new AbortController()
     setLoading(true); setErr('')
-    fetch(`${API_BASE}/terms/${encodeURIComponent(term)}`, { signal: ac.signal })
+    apiFetch(`${API_BASE}/terms/${encodeURIComponent(term)}`, ac.signal)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)

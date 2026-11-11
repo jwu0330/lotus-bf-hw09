@@ -6,7 +6,7 @@ export const queryUrl = (q, kind) => `${API_BASE}/query/${encodeURIComponent(q)}
 
 // Fetch the study list for one query; throws Error with the server's message.
 export async function fetchStudies (q, signal) {
-  const res = await fetch(queryUrl(q, 'studies'), { signal })
+  const res = await apiFetch(queryUrl(q, 'studies'), signal)
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
   return Array.isArray(data?.results) ? data.results : []
@@ -32,4 +32,16 @@ export function checkQuery (q) {
   const warn = []
   if (/\bOR\b/.test(q) || /[()]/.test(q)) warn.push('Note: the course API currently treats OR like AND and ignores parentheses (e.g. "amygdala OR fear" returns 45 = the AND result, not 501). Use Compare for reliable union / difference.')
   return { errors: [...new Set(issues)], warnings: warn }
+}
+
+// Every API call goes through here: a hard 25 s limit so a hung upstream shows an error
+// instead of an endless loading skeleton.
+export const TIMEOUT_MS = 25000
+export function apiFetch (url, signal) {
+  const t = AbortSignal.timeout(TIMEOUT_MS)
+  return fetch(url, { signal: signal ? AbortSignal.any([signal, t]) : t })
+    .catch((e) => {
+      if (e.name === 'TimeoutError' || (e.name === 'AbortError' && t.aborted)) throw new Error('The data server did not answer in time. Please retry later.')
+      throw e
+    })
 }

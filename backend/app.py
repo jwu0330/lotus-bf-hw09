@@ -9,6 +9,7 @@ served over https cannot call it directly (browsers block "mixed content"). Forw
 server side keeps the numbers identical to the course site while the page stays on https.
 """
 import os
+import time
 from collections import OrderedDict
 from pathlib import Path
 
@@ -25,7 +26,12 @@ PREFIX = '/lotus-bf'
 ALLOWED = ('terms', 'query/')
 
 app = FastAPI(title='LoTUS-BF HW09', docs_url=f'{PREFIX}/api/docs', openapi_url=f'{PREFIX}/api/openapi.json')
-client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=5.0), follow_redirects=True)
+client = httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=4.0), follow_redirects=True)
+
+# Circuit breaker: after a connection failure, skip that server for DOWN_SECONDS so every
+# request does not wait for the same timeout again (browsers would show endless loading).
+DOWN_SECONDS = 60
+down_until: dict = {}
 
 # Small in-memory cache of successful upstream answers: repeated queries are instant and keep
 # working for a while if the course servers go down (observed 2026-11-11 15:05: both down).
@@ -60,10 +66,17 @@ async def proxy(path: str, request: Request):
         body, ctype, extra = CACHE[key]
         return Response(body, media_type=ctype, headers={'Cache-Control': 'public, max-age=3600', 'X-Cache': 'hit', **extra})
     last_err = None
-    for base in UPSTREAMS:  # fail over to the second course server
+    live = [b for b in UPSTREAMS if down_until.get(b, 0) < time.monotonic()]
+    if not live:
+        last_err = 'both servers failed within the last minute'
+    for base in live:  # fail over to the second course server
         try:
             r = await client.get(f'{base}/{path}', params=request.query_params)
-        except httpx.HTTPError as e:
+        except (httpx.ConnectError, httpx.ConnectTimeout) as e:
+            down_until[base] = time.monotonic() + DOWN_SECONDS
+            last_err = f'{type(e).__name__} from {base}'
+            continue
+        except httpx.HTTPError as e:  # slow query: do not mark the server down
             last_err = f'{type(e).__name__} from {base}'
             continue
         if r.status_code >= 500:

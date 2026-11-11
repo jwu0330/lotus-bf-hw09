@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { queryUrl } from '../api'
+import { queryUrl, apiFetch } from '../api'
 
 // API: GET /query/{q}/locations  ->  {results: [{study_id, x, y, z}]}
 // Present in the template but never mounted; the course design puts it in the left column.
@@ -16,7 +16,7 @@ export function Locations ({ query, onPickLocation }) {
     if (!query) { setRows([]); return }
     const ac = new AbortController()
     setLoading(true); setErr('')
-    fetch(queryUrl(query, 'locations'), { signal: ac.signal })
+    apiFetch(queryUrl(query, 'locations'), ac.signal)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)

@@ -28,7 +28,7 @@ export default function App () {
   // Free hosting sleeps when idle: tell the user instead of looking broken.
   useEffect(() => {
     const t = setTimeout(() => setServer('waking'), 4000)
-    fetch(`${import.meta.env.BASE_URL}api/terms`)
+    fetch(`${import.meta.env.BASE_URL}api/terms`, { signal: AbortSignal.timeout(30000) })
       .then((r) => setServer(r.ok ? 'ok' : 'down'))
       .catch(() => setServer('down'))
       .finally(() => clearTimeout(t))

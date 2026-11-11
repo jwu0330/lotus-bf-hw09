@@ -4,7 +4,7 @@ const X_RIGHT_ON_SCREEN_RIGHT = true;
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as nifti from 'nifti-reader-js'
-import { queryUrl } from '../api'
+import { queryUrl, apiFetch } from '../api'
 
 const MNI_BG_URL = `${import.meta.env.BASE_URL}static/mni_2mm.nii.gz`
 
@@ -101,7 +101,7 @@ export function NiiViewer({ query, onPickLocation }) {
     return samp[Math.max(0, Math.min(samp.length-1, k))]
   }
   async function loadNifti(url) {
-    const res = await fetch(url)
+    const res = await apiFetch(url)
     if (!res.ok) {
       const t = await res.text().catch(()=> '')
       throw new Error(`GET ${url} → ${res.status} ${t}`)
@@ -411,7 +411,7 @@ const coord2idx = (c_mm, n, axis) => {
   return (
     <div className='nv'>
       <div className='nv__head'>
-        <div className='card__title'>Brain map</div>
+        <div className='card__title'>Brain map {loadingMap && <span className='badge'>loading map…</span>}</div>
         {query && <a href={mapUrl} className='btn btn--ghost'>Download .nii.gz</a>}
       </div>
 
@@ -422,7 +422,7 @@ const coord2idx = (c_mm, n, axis) => {
         </div>
       )}
 
-      <div className={`nv__views ${(loadingBG || loadingMap) ? 'is-loading' : ''}`}>
+      <div className='nv__views'>
         {sliceConfigs.map(({ key, name, axisLabel, canvasRef }) => (
           <figure key={key} className='nv__view'>
             <canvas ref={canvasRef} className='nv__canvas' onClick={(e) => onCanvasClick(e, key)} />

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: lotus-bf-hw09
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health

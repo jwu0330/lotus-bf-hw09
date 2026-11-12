@@ -26,7 +26,13 @@ export default function App () {
   const [ping, setPing] = useState(0) // bump to re-check the server
   const [nTerms, setNTerms] = useState(null) // shown in the hero; read from the same /terms health check
 
-  const append = useCallback((tok) => setQuery((q) => (q ? `${q} ${tok}` : tok)), [setQuery])
+  // Adjacent words form one term ("default mode"), so a picked term/location is joined with AND
+  // unless the query already ends with an operator or "(".
+  const append = useCallback((tok) => setQuery((q) => {
+    const s = (q || '').trim()
+    if (!s) return tok
+    return /(\b(AND|OR|NOT)|\()$/i.test(s) ? `${s} ${tok}` : `${s} AND ${tok}`
+  }), [setQuery])
   const handlePickTerm = useCallback((t) => { append(t); setFocusTerm(t) }, [append])
   const handlePickLocation = useCallback((xyz) => append(xyz), [append])
 

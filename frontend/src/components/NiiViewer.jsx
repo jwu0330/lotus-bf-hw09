@@ -23,6 +23,7 @@ export function NiiViewer({ query, onPickLocation, onCoordChange }) {
   const [loadingMap, setLoadingMap] = useState(false)
   const [errBG, setErrBG] = useState('')
   const [errMap, setErrMap] = useState('')
+  const [mapNonce, setMapNonce] = useState(0) // bump to retry the map download
 
   // backend params (map generation)
   const [voxel, setVoxel] = useState(2.0)
@@ -104,7 +105,9 @@ export function NiiViewer({ query, onPickLocation, onCoordChange }) {
     const res = await apiFetch(url)
     if (!res.ok) {
       const t = await res.text().catch(()=> '')
-      throw new Error(`GET ${url} → ${res.status} ${t}`)
+      let msg = t
+      try { msg = JSON.parse(t)?.error || t } catch { /* plain text body */ }
+      throw new Error(`HTTP ${res.status}${msg ? ` — ${String(msg).slice(0, 200)}` : ''}`)
     }
     let ab = await res.arrayBuffer()
     if (nifti.isCompressed(ab)) ab = nifti.decompress(ab)
@@ -209,7 +212,7 @@ const coord2idx = (c_mm, n, axis) => {
 
 // load meta-analytic map when query/params change
   useEffect(() => {
-    if (!mapUrl) { mapRef.current = null; return }
+    if (!mapUrl) { mapRef.current = null; setErrMap(''); return }
     let alive = true
     setLoadingMap(true); setErrMap('')
     ;(async () => {
@@ -234,7 +237,7 @@ const coord2idx = (c_mm, n, axis) => {
       }
     })()
     return () => { alive = false }
-  }, [mapUrl])
+  }, [mapUrl, mapNonce])
 
   const mapThreshold = useMemo(() => {
     const mv = mapRef.current
@@ -419,18 +422,21 @@ const coord2idx = (c_mm, n, axis) => {
   return (
     <div className='nv'>
       <div className='nv__head'>
-        <div className='card__title'>Brain map {loadingMap && <span className='badge'>loading map…</span>}</div>
+        <div className='card__title'>Brain map {(loadingMap || loadingBG) && <span className='badge badge--live' role='status'><span className='spinner spinner--xs' aria-hidden='true' />{loadingBG ? 'loading template…' : 'loading map…'}</span>}</div>
         {query && <a href={mapUrl} className='btn btn--ghost'>Download .nii.gz</a>}
       </div>
 
       {(errBG || errMap) && (
-        <div className='alert alert--warn'>
-          {errBG && <div>Background: {errBG}</div>}
-          {errMap && <div>Map: {errMap}</div>}
+        <div className='alert alert--warn alert--row' role='alert'>
+          <span>
+            {errBG && <div>Brain template failed to load: {errBG}</div>}
+            {errMap && <div>Activation map failed to load: {errMap}</div>}
+          </span>
+          {errMap && <button className='btn btn--sm' onClick={() => setMapNonce((n) => n + 1)}>Retry</button>}
         </div>
       )}
 
-      <div className='nv__views'>
+      <div className={`nv__views ${loadingMap || loadingBG ? 'is-loading' : ''}`} aria-busy={loadingMap || loadingBG}>
         {sliceConfigs.map(({ key, name, axisLabel, canvasRef }) => (
           <figure key={key} className='nv__view'>
             <canvas ref={canvasRef} className='nv__canvas' onClick={(e) => onCanvasClick(e, key)} />

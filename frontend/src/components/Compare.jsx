@@ -12,6 +12,7 @@ export function Compare ({ queryA, onUseQuery }) {
   const [run, setRun] = useState(null)
   const [state, setState] = useState({ loading: false, err: '', A: [], B: [] })
   const [view, setView] = useState('onlyA')
+  const [nonce, setNonce] = useState(0)
 
   useEffect(() => { if (queryA) setA(queryA) }, [queryA])
 
@@ -23,7 +24,7 @@ export function Compare ({ queryA, onUseQuery }) {
       .then(([A, B]) => setState({ loading: false, err: '', A, B }))
       .catch((e) => { if (e.name !== 'AbortError') setState({ loading: false, err: e.message, A: [], B: [] }) })
     return () => ac.abort()
-  }, [run])
+  }, [run, nonce])
 
   const sets = useMemo(() => {
     const idsB = new Set(state.B.map((r) => r.study_id))
@@ -45,16 +46,16 @@ export function Compare ({ queryA, onUseQuery }) {
     <div className='compare'>
       <div className='card__title'>Compare two queries</div>
       <div className='compare__inputs'>
-        <label><span className='dot dot--a' />A <input className='input' value={a} onChange={(e) => setA(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>
-        <label><span className='dot dot--b' />B <input className='input' value={b} onChange={(e) => setB(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>
+        <label><span className='dot dot--a' />A <input className='input' aria-label='Query A' value={a} onChange={(e) => setA(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>
+        <label><span className='dot dot--b' />B <input className='input' aria-label='Query B' value={b} onChange={(e) => setB(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>
         <span className='compare__actions'>
-          <button className='btn btn--ghost' onClick={() => { setA(b); setB(a) }} title='Swap A and B'>⇄</button>
-          <button className='btn btn--primary' onClick={go} disabled={!a.trim() || !b.trim() || bad.length > 0}>Compare</button>
+          <button className='btn btn--ghost' onClick={() => { setA(b); setB(a) }} title='Swap A and B' aria-label='Swap A and B'>⇄</button>
+          <button className='btn btn--primary' onClick={go} disabled={!a.trim() || !b.trim() || bad.length > 0 || state.loading}>{state.loading ? 'Comparing…' : 'Compare'}</button>
         </span>
       </div>
       {bad.map((e) => <div key={e} className='alert alert--error'>{e}</div>)}
-      {state.loading && <div className='skeleton' />}
-      {state.err && <div className='alert alert--error'>{state.err}</div>}
+      {state.loading && <div className='loading' role='status'><span className='spinner' aria-hidden='true' />Fetching both study lists…<div className='skeleton-list'>{[0, 1, 2].map((i) => <div key={i} className='skeleton' />)}</div></div>}
+      {state.err && <div className='alert alert--error alert--row' role='alert'><span>Comparison failed: {state.err}</span><button className='btn btn--sm' onClick={() => setNonce((n) => n + 1)}>Retry</button></div>}
       {run && !state.loading && !state.err && (
         <>
           <div className='compare__stats'>

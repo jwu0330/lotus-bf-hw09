@@ -6,6 +6,7 @@ export function Terms ({ onPickTerm }) {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+  const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -28,7 +29,7 @@ export function Terms ({ onPickTerm }) {
     }
     load()
     return () => { alive = false; ac.abort() }
-  }, [])
+  }, [nonce])
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()
@@ -44,8 +45,10 @@ export function Terms ({ onPickTerm }) {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder='Search terms…'
+          placeholder={terms.length ? `Search ${terms.length.toLocaleString()} terms…` : 'Search terms…'}
           className='input'
+          type='search'
+          aria-label='Search terms'
         />
         <button
           onClick={() => setSearch('')}
@@ -64,15 +67,16 @@ export function Terms ({ onPickTerm }) {
       )}
 
       {err && (
-        <div className='alert alert--error'>
-          {err}
+        <div className='alert alert--error alert--row' role='alert'>
+          <span>{err}</span>
+          <button className='btn btn--sm' onClick={() => setNonce((n) => n + 1)}>Retry</button>
         </div>
       )}
 
       {!loading && !err && (
-        <div className='terms__list'>
+        <div className='terms__list' aria-label='Terms (click to add to the query)'>
           {filtered.length === 0 ? (
-            <div className='terms__empty'>No terms found</div>
+            <div className='terms__empty'>No terms contain “{search}”</div>
           ) : (
             <ul className='terms__ul'>
               {filtered.slice(0, 500).map((t, idx) => (
@@ -88,6 +92,7 @@ export function Terms ({ onPickTerm }) {
 </a>
                 </li>
               ))}
+              {filtered.length > 500 && <li className='terms__more muted small'>Showing 500 of {filtered.length.toLocaleString()} — type to narrow down.</li>}
             </ul>
           )}
         </div>

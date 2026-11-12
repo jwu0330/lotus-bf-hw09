@@ -56,8 +56,8 @@ export function Decoder ({ coord, onPickTerm }) {
       </div>
 
       {!target && <div className='empty'>Move the crosshair on the brain map, then press <b>Decode this location</b> to rank the terms most associated with it.</div>}
-      {loading && <div className='skeleton-list'>{[0, 1, 2, 3, 4].map((i) => <div key={i} className='skeleton' style={{ width: `${90 - i * 12}%` }} />)}</div>}
-      {!loading && err && <div className='alert alert--error'>{err}</div>}
+      {loading && <div className='skeleton-list' role='status' aria-label='Decoding'>{[0, 1, 2, 3, 4].map((i) => <div key={i} className='skeleton' style={{ width: `${90 - i * 12}%` }} />)}</div>}
+      {!loading && err && <div className='alert alert--error alert--row' role='alert'><span>{err}</span><button className='btn btn--sm' onClick={() => setTarget((t) => (t ? { ...t } : t))}>Retry</button></div>}
       {!loading && !err && data && (
         <>
           <div className='small muted'>

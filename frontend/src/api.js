@@ -8,7 +8,7 @@ export const queryUrl = (q, kind) => `${API_BASE}/query/${encodeURIComponent(q)}
 export async function fetchStudies (q, signal) {
   const res = await apiFetch(queryUrl(q, 'studies'), signal)
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw httpError(res.status, data?.error)
+  if (!res.ok) throw Object.assign(httpError(res.status, data?.error), { badTerm: data?.bad_term, suggestions: data?.suggestions })
   return Array.isArray(data?.results) ? data.results : []
 }
 

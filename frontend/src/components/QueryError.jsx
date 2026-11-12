@@ -6,7 +6,8 @@ import { isRetryable, parseSuggestions } from '../api'
 export function QueryError ({ error, onRetry, onFix, prefix = '' }) {
   if (!error) return null
   const msg = String(error.message || error)
-  const sug = onFix ? parseSuggestions(msg) : null
+  // Prefer the backend's structured fields; parse the message only as a fallback.
+  const sug = !onFix ? null : (error.badTerm && Array.isArray(error.suggestions) ? { bad: error.badTerm, options: error.suggestions.slice(0, 6) } : parseSuggestions(msg))
   const retry = isRetryable(error) && onRetry
   return (
     <div className={`alert ${retry ? 'alert--error' : 'alert--warn'} alert--row`} role='alert'>

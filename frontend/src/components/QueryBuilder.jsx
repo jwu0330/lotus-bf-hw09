@@ -29,10 +29,8 @@ export function QueryBuilder ({ query, setQuery, terms = [] }) {
 
   const [open, setOpen] = useState(false)
   const [hi, setHi] = useState(-1)
-  const { start, piece } = currentPiece(draft)
-  const suggestions = useMemo(() => {
-    const p = piece.trim().toLowerCase()
-    if (!open || !p || p.startsWith('[')) return []
+  const tail = currentPiece(draft)
+  const match = (p) => {
     const pre = []; const mid = []
     for (const t of terms) {
       const l = t.toLowerCase()
@@ -42,8 +40,21 @@ export function QueryBuilder ({ query, setQuery, terms = [] }) {
       if (pre.length >= 8) break
     }
     return [...pre, ...mid].slice(0, 8)
-  }, [piece, terms, open])
-  const pick = (t) => { setDraft(draft.slice(0, start) + t + ' '); setOpen(false); setHi(-1) }
+  }
+  // Whole tail first ("default mo" -> "default mode"); if nothing fits and the tail has several
+  // words ("amygdala fe"), complete the last word and join it with AND, like picking a term does.
+  const { start, piece, joinAnd, suggestions } = useMemo(() => {
+    const p = tail.piece.trim().toLowerCase()
+    const none = { ...tail, joinAnd: false, suggestions: [] }
+    if (!open || !p || p.startsWith('[')) return none
+    const whole = match(p)
+    if (whole.length || !/\s/.test(p)) return { ...tail, joinAnd: false, suggestions: whole }
+    const sp = tail.piece.trimEnd().lastIndexOf(' ')
+    const last = tail.piece.slice(sp + 1)
+    return { start: tail.start + sp + 1, piece: last, joinAnd: true, suggestions: match(last.toLowerCase()) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tail.piece, tail.start, terms, open])
+  const pick = (t) => { setDraft(draft.slice(0, start) + (joinAnd ? 'AND ' : '') + t + ' '); setOpen(false); setHi(-1) }
   const onKey = (e) => {
     if (suggestions.length && e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => (h + 1) % suggestions.length) }
     else if (suggestions.length && e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => (h <= 0 ? suggestions.length - 1 : h - 1)) }

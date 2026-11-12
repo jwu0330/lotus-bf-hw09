@@ -38,8 +38,13 @@ export default function App () {
   const handlePickLocation = useCallback((xyz) => append(xyz), [append])
   // "Did you mean" button: swap the unknown term for the suggestion, keep the rest of the query.
   const fixQuery = useCallback((bad, good) => setQuery((q) => {
-    const i = (q || '').toLowerCase().indexOf(bad.toLowerCase())
-    return i < 0 ? good : q.slice(0, i) + good + q.slice(i + bad.length)
+    // Last whole-word match, so fixing "fea" in "fear AND fea" does not touch "fear".
+    const words = bad.trim().split(/[\s_]+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const re = new RegExp(`\\b${words.join('[\\s_]+')}\\b`, 'gi')
+    const s = q || ''
+    let last = null
+    for (const m of s.matchAll(re)) last = m
+    return last ? s.slice(0, last.index) + good + s.slice(last.index + last[0].length) : good
   }), [setQuery])
 
   // Free hosting sleeps when idle: tell the user instead of looking broken.

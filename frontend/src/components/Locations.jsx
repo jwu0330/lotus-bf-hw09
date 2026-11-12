@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { queryUrl, apiFetch } from '../api'
+import { queryUrl, apiFetch, httpError } from '../api'
+import { QueryError } from './QueryError'
 
 // API: GET /query/{q}/locations  ->  {results: [{study_id, x, y, z}]}
 // Present in the template but never mounted; the course design puts it in the left column.
@@ -7,7 +8,7 @@ import { queryUrl, apiFetch } from '../api'
 export function Locations ({ query, onPickLocation }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState(null)
   const [page, setPage] = useState(1)
   const [nonce, setNonce] = useState(0)
   const pageSize = 25
@@ -16,14 +17,14 @@ export function Locations ({ query, onPickLocation }) {
     setPage(1)
     if (!query) { setRows([]); return }
     const ac = new AbortController()
-    setLoading(true); setErr('')
+    setLoading(true); setErr(null)
     apiFetch(queryUrl(query, 'locations'), ac.signal)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
+        if (!res.ok) throw httpError(res.status, data?.error)
         setRows(Array.isArray(data?.results) ? data.results : [])
       })
-      .catch((e) => { if (e.name !== 'AbortError') { setErr(e.message); setRows([]) } })
+      .catch((e) => { if (e.name !== 'AbortError') { setErr(e); setRows([]) } })
       .finally(() => { if (!ac.signal.aborted) setLoading(false) })
     return () => ac.abort()
   }, [query, nonce])
@@ -34,7 +35,7 @@ export function Locations ({ query, onPickLocation }) {
 
   if (!query) return <div className='empty'>Run a query to list the activation peaks of matching studies.</div>
   if (loading) return <div className='loading' role='status'><span className='spinner' aria-hidden='true' />Loading activation peaks…<div className='skeleton-list'>{[0, 1, 2, 3, 4].map((i) => <div key={i} className='skeleton' />)}</div></div>
-  if (err) return <div className='alert alert--error alert--row' role='alert'><span>{err}</span><button className='btn btn--sm' onClick={() => setNonce((n) => n + 1)}>Retry</button></div>
+  if (err) return <QueryError error={err} onRetry={() => setNonce((n) => n + 1)} />
   if (!rows.length) return <div className='empty'>No activation peaks for <b>{query}</b>.</div>
   return (
     <div className='locations'>

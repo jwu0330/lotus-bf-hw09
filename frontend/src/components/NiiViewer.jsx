@@ -4,7 +4,7 @@ const X_RIGHT_ON_SCREEN_RIGHT = true;
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as nifti from 'nifti-reader-js'
-import { queryUrl, apiFetch } from '../api'
+import { queryUrl, apiFetch, httpError, isRetryable } from '../api'
 
 const MNI_BG_URL = `${import.meta.env.BASE_URL}static/mni_2mm.nii.gz`
 
@@ -107,7 +107,7 @@ export function NiiViewer({ query, onPickLocation, onCoordChange }) {
       const t = await res.text().catch(()=> '')
       let msg = t
       try { msg = JSON.parse(t)?.error || t } catch { /* plain text body */ }
-      throw new Error(`HTTP ${res.status}${msg ? ` — ${String(msg).slice(0, 200)}` : ''}`)
+      throw httpError(res.status, String(msg || '').slice(0, 200))
     }
     let ab = await res.arrayBuffer()
     if (nifti.isCompressed(ab)) ab = nifti.decompress(ab)
@@ -229,7 +229,7 @@ const coord2idx = (c_mm, n, axis) => {
         }
       } catch (e) {
         if (!alive) return
-        setErrMap(e?.message || String(e))
+        setErrMap(e)
         mapRef.current = null
       } finally {
         if (!alive) return
@@ -430,9 +430,9 @@ const coord2idx = (c_mm, n, axis) => {
         <div className='alert alert--warn alert--row' role='alert'>
           <span>
             {errBG && <div>Brain template failed to load: {errBG}</div>}
-            {errMap && <div>Activation map failed to load: {errMap}</div>}
+            {errMap && <div>{isRetryable(errMap) ? `Activation map failed to load: ${errMap.message || errMap}` : 'No activation map for this query — fix the query above.'}</div>}
           </span>
-          {errMap && <button className='btn btn--sm' onClick={() => setMapNonce((n) => n + 1)}>Retry</button>}
+          {errMap && isRetryable(errMap) && <button className='btn btn--sm' onClick={() => setMapNonce((n) => n + 1)}>Retry</button>}
         </div>
       )}
 

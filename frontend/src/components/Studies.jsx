@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchStudies } from '../api'
 import { downloadCsv } from '../csv'
+import { QueryError } from './QueryError'
 
-export function Studies ({ query }) {
+export function Studies ({ query, onFixQuery }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState('')
+  const [err, setErr] = useState(null)
   const [sortKey, setSortKey] = useState('year')
   const [sortDir, setSortDir] = useState('desc')
   const [filter, setFilter] = useState('')
@@ -19,10 +20,10 @@ export function Studies ({ query }) {
   useEffect(() => {
     if (!query) { setRows([]); return }
     const ac = new AbortController()
-    setLoading(true); setErr('')
+    setLoading(true); setErr(null)
     fetchStudies(query, ac.signal)
       .then(setRows)
-      .catch((e) => { if (e.name !== 'AbortError') { setErr(`Unable to fetch studies: ${e.message}`); setRows([]) } })
+      .catch((e) => { if (e.name !== 'AbortError') { setErr(e); setRows([]) } })
       .finally(() => { if (!ac.signal.aborted) setLoading(false) })
     return () => ac.abort()
   }, [query, nonce])
@@ -59,7 +60,7 @@ export function Studies ({ query }) {
           <div className='skeleton-list'>{Array.from({ length: 6 }).map((_, i) => <div key={i} className='skeleton' />)}</div>
         </div>
       )}
-      {err && <div className='alert alert--error alert--row' role='alert'><span>{err}</span><button className='btn btn--sm' onClick={() => setNonce((n) => n + 1)}>Retry</button></div>}
+      <QueryError error={err} onRetry={() => setNonce((n) => n + 1)} onFix={onFixQuery} />
       {!loading && !err && rows.length === 0 && <div className='empty'>No studies match <b>{query}</b>. Try a broader term, a larger radius, or remove a NOT clause.</div>}
       {!loading && !err && rows.length > 0 && (
         <>

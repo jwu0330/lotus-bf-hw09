@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchStudies, checkQuery } from '../api'
 import { downloadCsv } from '../csv'
+import { QueryError } from './QueryError'
 
 // Highlight: compare two queries side by side (same /query/{q}/studies API, run twice).
 // Set operations are done here on study_id (two plain queries), which also lets us show the
@@ -10,7 +11,7 @@ export function Compare ({ queryA, onUseQuery }) {
   const [a, setA] = useState(queryA || 'amygdala')
   const [b, setB] = useState('hippocampus')
   const [run, setRun] = useState(null)
-  const [state, setState] = useState({ loading: false, err: '', A: [], B: [] })
+  const [state, setState] = useState({ loading: false, err: null, A: [], B: [] })
   const [view, setView] = useState('onlyA')
   const [nonce, setNonce] = useState(0)
 
@@ -19,10 +20,10 @@ export function Compare ({ queryA, onUseQuery }) {
   useEffect(() => {
     if (!run) return
     const ac = new AbortController()
-    setState((s) => ({ ...s, loading: true, err: '' }))
+    setState((s) => ({ ...s, loading: true, err: null }))
     Promise.all([fetchStudies(run.a, ac.signal), fetchStudies(run.b, ac.signal)])
-      .then(([A, B]) => setState({ loading: false, err: '', A, B }))
-      .catch((e) => { if (e.name !== 'AbortError') setState({ loading: false, err: e.message, A: [], B: [] }) })
+      .then(([A, B]) => setState({ loading: false, err: null, A, B }))
+      .catch((e) => { if (e.name !== 'AbortError') setState({ loading: false, err: e, A: [], B: [] }) })
     return () => ac.abort()
   }, [run, nonce])
 
@@ -55,7 +56,7 @@ export function Compare ({ queryA, onUseQuery }) {
       </div>
       {bad.map((e) => <div key={e} className='alert alert--error'>{e}</div>)}
       {state.loading && <div className='loading' role='status'><span className='spinner' aria-hidden='true' />Fetching both study lists…<div className='skeleton-list'>{[0, 1, 2].map((i) => <div key={i} className='skeleton' />)}</div></div>}
-      {state.err && <div className='alert alert--error alert--row' role='alert'><span>Comparison failed: {state.err}</span><button className='btn btn--sm' onClick={() => setNonce((n) => n + 1)}>Retry</button></div>}
+      <QueryError error={state.err} prefix='Comparison failed: ' onRetry={() => setNonce((n) => n + 1)} />
       {run && !state.loading && !state.err && (
         <>
           <div className='compare__stats'>

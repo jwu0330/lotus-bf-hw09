@@ -349,3 +349,21 @@ body { background: radial-gradient(1200px 500px at 85% -10%, color-mix(in srgb, 
   .qb__examples { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
   .qb__examples .chip { flex: none; }
 }
+
+/* ---- desktop alignment pass ---- */
+.table th { white-space: nowrap; }
+.terms__controls .btn--primary { box-shadow: none; background: var(--surface); }
+.card--dark { border-color: transparent; }
+@media (min-width: 1151px) {
+  /* brain map + decoder follow the long results list instead of leaving an empty column */
+  .app__col { position: sticky; top: 16px; }
+  .app__left .terms__list { max-height: 46vh; }
+}
+
+/* query autocomplete + did-you-mean */
+.qb__suggest { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 6px; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(20, 24, 60, .35); max-height: 320px; overflow: auto; }
+.qb__suggest li { padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.qb__suggest li b { color: var(--primary); font-weight: 700; }
+.qb__suggest li.is-hi { background: color-mix(in srgb, var(--primary) 10%, var(--surface-2)); }
+.suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.suggest::before { content: 'Did you mean'; font-size: 12px; opacity: .8; margin-right: 2px; }

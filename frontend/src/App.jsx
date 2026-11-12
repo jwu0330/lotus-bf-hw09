@@ -24,7 +24,8 @@ export default function App () {
   const [server, setServer] = useState('ok') // ok | waking | down
   const [coord, setCoord] = useState(null) // brain-viewer crosshair, MNI mm [x,y,z]
   const [ping, setPing] = useState(0) // bump to re-check the server
-  const [nTerms, setNTerms] = useState(null) // shown in the hero; read from the same /terms health check
+  const [termList, setTermList] = useState([]) // from the same /terms health check: hero count + query autocomplete
+  const nTerms = termList.length || null
 
   // Adjacent words form one term ("default mode"), so a picked term/location is joined with AND
   // unless the query already ends with an operator or "(".
@@ -35,6 +36,11 @@ export default function App () {
   }), [setQuery])
   const handlePickTerm = useCallback((t) => { append(t); setFocusTerm(t) }, [append])
   const handlePickLocation = useCallback((xyz) => append(xyz), [append])
+  // "Did you mean" button: swap the unknown term for the suggestion, keep the rest of the query.
+  const fixQuery = useCallback((bad, good) => setQuery((q) => {
+    const i = (q || '').toLowerCase().indexOf(bad.toLowerCase())
+    return i < 0 ? good : q.slice(0, i) + good + q.slice(i + bad.length)
+  }), [setQuery])
 
   // Free hosting sleeps when idle: tell the user instead of looking broken.
   useEffect(() => {
@@ -44,7 +50,7 @@ export default function App () {
       .then(async (r) => {
         if (!alive) return
         setServer(r.ok ? 'ok' : 'down')
-        if (r.ok) { const d = await r.json().catch(() => null); if (alive && Array.isArray(d?.terms)) setNTerms(d.terms.length) }
+        if (r.ok) { const d = await r.json().catch(() => null); if (alive && Array.isArray(d?.terms)) setTermList(d.terms) }
       })
       .catch(() => alive && setServer('down'))
       .finally(() => clearTimeout(t))
@@ -75,7 +81,7 @@ export default function App () {
           <div className='hero__row'>
             <ul className='hero__stats' aria-label='Database size'>
               <li><b>14,371</b><span>studies</span></li>
-              <li><b>{nTerms ? nTerms.toLocaleString() : '3,228'}</b><span>terms</span></li>
+              <li><b>{nTerms ? nTerms.toLocaleString() : '—'}</b><span>terms</span></li>
               <li><b>Neurosynth</b><span>HW08 PostgreSQL</span></li>
             </ul>
           </div>
@@ -90,7 +96,7 @@ export default function App () {
       )}
 
       <section className='querybar' aria-label='Search'>
-        <QueryBuilder query={query} setQuery={setQuery} />
+        <QueryBuilder query={query} setQuery={setQuery} terms={termList} />
       </section>
 
       <main className='app__grid'>
@@ -119,7 +125,7 @@ export default function App () {
             ))}
           </div>
           {midTab === 'studies'
-            ? <Studies query={query} />
+            ? <Studies query={query} onFixQuery={fixQuery} />
             : <Compare queryA={query} onUseQuery={(q) => { setQuery(q); setMidTab('studies') }} />}
         </section>
 

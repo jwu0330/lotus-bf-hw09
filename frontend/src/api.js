@@ -8,8 +8,23 @@ export const queryUrl = (q, kind) => `${API_BASE}/query/${encodeURIComponent(q)}
 export async function fetchStudies (q, signal) {
   const res = await apiFetch(queryUrl(q, 'studies'), signal)
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
+  if (!res.ok) throw httpError(res.status, data?.error)
   return Array.isArray(data?.results) ? data.results : []
+}
+
+// HTTP errors carry their status: a 4xx means the query itself is wrong (unknown term, bad syntax), so
+// retrying cannot help; only network/5xx/timeout errors get a Retry button.
+export function httpError (status, message) {
+  const e = new Error(message || `HTTP ${status}`)
+  e.status = status
+  return e
+}
+export const isRetryable = (e) => !(e?.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429)
+
+// "Term 'amyg' is not in the Neurosynth vocabulary. Did you mean: amygdala, …?" -> {bad, options}
+export function parseSuggestions (msg) {
+  const m = /Term '([^']+)'[^]*?Did you mean:\s*([^?]+)/.exec(String(msg || ''))
+  return m ? { bad: m[1], options: m[2].split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6) } : null
 }
 
 // Client-side syntax check: catch typos before a round trip (the server also validates).

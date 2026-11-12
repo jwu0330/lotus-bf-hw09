@@ -147,3 +147,35 @@ select.input { padding-right: 6px; }
 .nv__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 .nv__grid label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
 @media (max-width: 720px) { .nv__grid { grid-template-columns: 1fr; } }
+
+/* right column: brain map + decoder stacked */
+.app__col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+/* decoder */
+.decoder { display: flex; flex-direction: column; gap: 10px; }
+.decoder__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.decoder__xyz { font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding: 4px 10px; border-radius: 8px; background: var(--surface-2); font-variant-numeric: tabular-nums; }
+.decoder__r { display: inline-flex; align-items: center; gap: 6px; }
+.decoder__r .input { width: 56px; text-align: right; }
+.decoder__bar .btn { margin-left: auto; }
+.decoder__n { color: var(--text); font-variant-numeric: tabular-nums; }
+.decoder__list { display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow: auto; }
+.decoder__legend { display: flex; justify-content: space-between; padding: 0 8px 4px; border-bottom: 1px solid var(--border); margin-bottom: 2px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+.decoder__row { flex: none; align-items: center; gap: 8px; }
+.decoder__row .related__term { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.decoder__row .related__num { white-space: nowrap; }
+.decoder__row .related__num b { color: var(--text); font-weight: 600; }
+.related__row:focus-visible, .seg__btn:focus-visible, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* footer data-source note */
+.app__footer { display: flex; flex-direction: column; gap: 4px; align-items: center; border-top: 1px solid var(--border); margin-top: 8px; }
+.app__source { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; }
+.app__source span + span::before { content: '·'; margin: 0 8px; opacity: .6; }
+
+/* small polish */
+.card { transition: border-color .15s; }
+.card__title { letter-spacing: -.005em; }
+.empty b { color: var(--text); font-weight: 600; }
+.terms__list, .table-wrap, .compare__list, .decoder__list { scrollbar-width: thin; }
+@media (max-width: 720px) { .decoder__bar .btn { margin-left: 0; width: 100%; } }

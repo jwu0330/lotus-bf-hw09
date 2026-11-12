@@ -1,5 +1,5 @@
-// Same-origin API: the backend in ../backend forwards /lotus-bf/api/* to the course LoTUS API.
-// (The course API is http-only; calling it directly from an https page is blocked as mixed content.)
+// Same-origin API: the backend in ../backend serves /lotus-bf/api/* by querying the HW08
+// Neurosynth PostgreSQL database (a study "mentions" a term when its TF-IDF weight > 0.001).
 export const API_BASE = new URL(`${import.meta.env.BASE_URL}api`, window.location.origin).href
 
 export const queryUrl = (q, kind) => `${API_BASE}/query/${encodeURIComponent(q)}/${kind}`
@@ -12,7 +12,7 @@ export async function fetchStudies (q, signal) {
   return Array.isArray(data?.results) ? data.results : []
 }
 
-// Client-side syntax check (the course API silently returns odd results instead of errors).
+// Client-side syntax check: catch typos before a round trip (the server also validates).
 export function checkQuery (q) {
   const issues = []
   if (!q.trim()) return { errors: [], warnings: [] }
@@ -29,14 +29,12 @@ export function checkQuery (q) {
   if (ops.has(toks[0]) && toks[0] !== 'NOT') issues.push(`Query cannot start with ${toks[0]}.`)
   if (ops.has(toks[toks.length - 1])) issues.push(`Query cannot end with ${toks[toks.length - 1]}.`)
   for (let i = 1; i < toks.length; i++) if (ops.has(toks[i]) && ops.has(toks[i - 1]) && toks[i] !== 'NOT') issues.push(`"${toks[i - 1]} ${toks[i]}" has no operand between.`)
-  const warn = []
-  if (/\bOR\b/.test(q) || /[()]/.test(q)) warn.push('Note: the course API currently treats OR like AND and ignores parentheses (e.g. "amygdala OR fear" returns 45 = the AND result, not 501). Use Compare for reliable union / difference.')
-  return { errors: [...new Set(issues)], warnings: warn }
+  return { errors: [...new Set(issues)], warnings: [] }
 }
 
-// Every API call goes through here: a hard 25 s limit so a hung upstream shows an error
+// Every API call goes through here: a hard 70 s limit (the data server may need ~30 s to wake up) so a hung upstream shows an error
 // instead of an endless loading skeleton.
-export const TIMEOUT_MS = 25000
+export const TIMEOUT_MS = 70000
 export function apiFetch (url, signal) {
   const t = AbortSignal.timeout(TIMEOUT_MS)
   return fetch(url, { signal: signal ? AbortSignal.any([signal, t]) : t })

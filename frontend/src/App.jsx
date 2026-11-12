@@ -6,20 +6,22 @@ import { QueryBuilder } from './components/QueryBuilder'
 import { Studies } from './components/Studies'
 import { Compare } from './components/Compare'
 import { NiiViewer } from './components/NiiViewer'
+import { Decoder } from './components/Decoder'
 import { useUrlQueryState } from './hooks/useUrlQueryState'
 import './App.css'
 
 // Layout follows the course rule "one API <-> one component <-> one block":
 //   left   Terms (/terms) · RelatedTerms (/terms/<t>) · Locations (/query/q/locations)
 //   middle QueryBuilder · Studies (/query/q/studies) | Compare (/query/q/studies x2)
-//   right  NiiViewer (/query/q/nii)
-// App only owns the shared query and passes callbacks (onPickTerm, onPickLocation) down.
+//   right  NiiViewer (/query/q/nii) · Decoder (/decode/x_y_z)
+// App only owns the shared query + crosshair and passes callbacks (onPickTerm, onPickLocation, onCoordChange) down.
 export default function App () {
   const [query, setQuery] = useUrlQueryState('q')
   const [focusTerm, setFocusTerm] = useState('')
   const [leftTab, setLeftTab] = useState('terms')
   const [midTab, setMidTab] = useState('studies')
   const [server, setServer] = useState('ok') // ok | waking | down
+  const [coord, setCoord] = useState(null) // brain-viewer crosshair, MNI mm [x,y,z]
 
   const append = useCallback((tok) => setQuery((q) => (q ? `${q} ${tok}` : tok)), [setQuery])
   const handlePickTerm = useCallback((t) => { append(t); setFocusTerm(t) }, [append])
@@ -52,7 +54,7 @@ export default function App () {
         {query && <div className='app__query' title='Current query — the URL is shareable'><span className='muted'>Query</span> <code>{query}</code></div>}
       </header>
       {server === 'waking' && <div className='banner'>Connecting… (free hosting sleeps when idle; the first load can take up to a minute)</div>}
-      {server === 'down' && <div className='banner banner--err'>The course LoTUS data server (psy.ntu.edu.tw:5000) is not responding right now, so searches will fail. This site is up; please retry in a few minutes.</div>}
+      {server === 'down' && <div className='banner banner--err'>The data server is not responding right now, so searches may fail. Please retry in a minute or two.</div>}
 
       <main className='app__grid'>
         <section className='card' aria-label='Terms and locations'>
@@ -85,12 +87,22 @@ export default function App () {
             : <Compare queryA={query} onUseQuery={(q) => { setQuery(q); setMidTab('studies') }} />}
         </section>
 
-        <section className='card' aria-label='Brain map'>
-          <NiiViewer query={query} onPickLocation={handlePickLocation} />
-        </section>
+        <div className='app__col'>
+          <section className='card' aria-label='Brain map'>
+            <NiiViewer query={query} onPickLocation={handlePickLocation} onCoordChange={setCoord} />
+          </section>
+          <section className='card' aria-label='Decode location'>
+            <Decoder coord={coord} onPickTerm={handlePickTerm} />
+          </section>
+        </div>
       </main>
       <footer className='app__footer'>
-        Data: course LoTUS API (Neurosynth). Study links open PubMed. <a href={`${import.meta.env.BASE_URL}api/docs`}>API docs</a>
+        <div className='app__source'>
+          <span>Data: Neurosynth (HW08 database)</span>
+          <span>a study mentions a term when TF-IDF &gt; 0.001</span>
+          <span>locations within r mm</span>
+        </div>
+        <div>Study links open PubMed · <a href={`${import.meta.env.BASE_URL}api/docs`}>API docs</a></div>
       </footer>
     </div>
   )

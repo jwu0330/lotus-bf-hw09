@@ -2,11 +2,13 @@
 
 One FastAPI service that
   1. serves the built React front end at /lotus-bf/ (same origin -> no CORS, no mixed content);
-  2. forwards /lotus-bf/api/<path> to the course's LoTUS API, which only speaks plain http.
+  2. forwards /lotus-bf/api/<path> to the data API.
 
-Why a proxy: the course API (hpc/mil.psy.ntu.edu.tw:5000) has no working https, so a page
-served over https cannot call it directly (browsers block "mixed content"). Forwarding on the
-server side keeps the numbers identical to the course site while the page stays on https.
+Data API (changed 2026-11-12): the course LoTUS API (hpc/mil.psy.ntu.edu.tw:5000) stopped
+responding on the due date, so the same endpoints were added to the student's own HW08 backend
+(https://ns-nano-hw08.onrender.com/lotus, Neurosynth in PostgreSQL; copy of that code in hw08_app.py, section 5).
+Set LOTUS_UPSTREAMS to a comma-separated list to switch back, e.g. to the course servers.
+Same origin -> no CORS and no mixed content (the course API is http only).
 """
 import os
 import time
@@ -19,14 +21,15 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 UPSTREAMS = [u.rstrip('/') for u in os.environ.get(
-    'LOTUS_UPSTREAMS', 'http://hpc.psy.ntu.edu.tw:5000,http://mil.psy.ntu.edu.tw:5000').split(',') if u.strip()]
+    'LOTUS_UPSTREAMS', 'https://ns-nano-hw08.onrender.com/lotus').split(',') if u.strip()]
 DIST = Path(__file__).resolve().parent.parent / 'frontend' / 'dist'
 PREFIX = '/lotus-bf'
 # Only the read-only routes the front end uses are forwarded (no open proxy).
-ALLOWED = ('terms', 'query/')
+ALLOWED = ('terms', 'query/', 'decode/')
 
 app = FastAPI(title='LoTUS-BF HW09', docs_url=f'{PREFIX}/api/docs', openapi_url=f'{PREFIX}/api/openapi.json')
-client = httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=4.0), follow_redirects=True)
+# The free HW08 instance may need ~30 s to wake up, hence the long timeouts.
+client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=15.0), follow_redirects=True)
 
 # Circuit breaker: after a connection failure, skip that server for DOWN_SECONDS so every
 # request does not wait for the same timeout again (browsers would show endless loading).
@@ -90,7 +93,7 @@ async def proxy(path: str, request: Request):
                             {k: v for k, v in headers.items() if k == 'Content-Disposition'}))
         return Response(r.content, status_code=r.status_code,
                         media_type=r.headers.get('content-type'), headers=headers)
-    return JSONResponse({'error': 'The course LoTUS server (hpc/mil.psy.ntu.edu.tw:5000) is not responding '
+    return JSONResponse({'error': 'The data server is not responding '
                                   f'right now ({last_err or "timeout"}). Please retry in a few minutes.'},
                         status_code=502)
 

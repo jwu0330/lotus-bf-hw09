@@ -18,7 +18,7 @@ function isStandardMNI2mm(dims, voxelMM) {
 // x = -2*i + 90;  y = 2*j - 126;  z = 2*k - 72
 const MNI2MM = { x0: 90, y0: -126, z0: -72, vx: 2, vy: 2, vz: 2 };
 
-export function NiiViewer({ query, onPickLocation }) {
+export function NiiViewer({ query, onPickLocation, onCoordChange }) {
   const [loadingBG, setLoadingBG] = useState(false)
   const [loadingMap, setLoadingMap] = useState(false)
   const [errBG, setErrBG] = useState('')
@@ -357,6 +357,14 @@ const coord2idx = (c_mm, n, axis) => {
     setCz(String(idx2coord(iz, nz, 'z')))
   }, [ix,iy,iz,dims])
 
+  // lift the committed crosshair MNI coordinate up to App (used by the Decoder panel)
+  useEffect(() => {
+    const [nx, ny, nz] = dims
+    if (!nx || !onCoordChange) return
+    onCoordChange([idx2coord(ix, nx, 'x'), idx2coord(iy, ny, 'y'), idx2coord(iz, nz, 'z')])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ix, iy, iz, dims, onCoordChange])
+
   // commit handlers: parse signed integer, map to index, clamp to volume
   const commitCoord = (axis) => {
     const [nx,ny,nz] = dims
@@ -430,7 +438,7 @@ const coord2idx = (c_mm, n, axis) => {
           </figure>
         ))}
       </div>
-      {!query && <div className='muted small'>Run a query to overlay its activation map. Click a slice to move the crosshair.</div>}
+      {!query && <div className='muted small'>Run a query to overlay its activation map. Click a slice to move the crosshair, then decode that location below.</div>}
 
       <div className='nv__panel'>
         <div className='nv__coords'>

@@ -3,8 +3,8 @@ import { fetchStudies, checkQuery } from '../api'
 import { downloadCsv } from '../csv'
 
 // Highlight: compare two queries side by side (same /query/{q}/studies API, run twice).
-// Set operations are done here on study_id, NOT by the course API: its parser treats OR as AND
-// and ignores parentheses, so "(A) NOT (B)" would silently give a wrong answer.
+// Set operations are done here on study_id (two plain queries), which also lets us show the
+// overlap and both differences at once instead of three separate boolean queries.
 // A\B and B\A are exactly HW08's "functional dissociation" between two terms/locations.
 export function Compare ({ queryA, onUseQuery }) {
   const [a, setA] = useState(queryA || 'amygdala')
@@ -73,7 +73,7 @@ export function Compare ({ queryA, onUseQuery }) {
           <div className='compare__list-head'>
             <b>{labels[view]}</b>
             <span>
-              {view !== 'both' && <button className='btn btn--ghost' onClick={() => onUseQuery(view === 'onlyA' ? `${run.a} NOT ${run.b}` : `${run.b} NOT ${run.a}`)} title='Load this in the main view (brain map uses the course API)'>Show on brain</button>}
+              {view !== 'both' && <button className='btn btn--ghost' onClick={() => onUseQuery(view === 'onlyA' ? `${run.a} NOT ${run.b}` : `${run.b} NOT ${run.a}`)} title='Load this query in the main view and brain map'>Show on brain</button>}
               <button className='btn btn--ghost' disabled={!lists[view].length} onClick={() => downloadCsv(lists[view], `lotus-compare-${view}.csv`)}>CSV</button>
             </span>
           </div>
